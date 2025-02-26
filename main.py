@@ -1,52 +1,46 @@
-# دالة لحساب الـ exp(x) باستخدام متسلسلة تايلور
-def exp(x, terms=10):
-    result = 1.0
-    term = 1.0
+import math
+import random
+
+def exp_fn(x, terms=30):
+    res, term = 1.0, 1.0
     for i in range(1, terms):
         term *= x / i
-        result += term
-    return result
+        res += term
+    return res
 
-# دالة لحساب tanh(x) بدون مكتبات
-def tanh(x):
-    exp_x = exp(x)
-    exp_neg_x = exp(-x)
-    return (exp_x - exp_neg_x) / (exp_x + exp_neg_x)
+def tanh_fn(x):
+    e = exp_fn(2 * x)
+    return (e - 1) / (e + 1)
 
-# مولد أرقام عشوائية بسيط بدون مكتبات (Linear Congruential Generator)
-seed = 42
-def random_uniform(low, high):
-    global seed
-    seed = (1664525 * seed + 1013904223) % (2**32)
-    return low + (seed / (2**32)) * (high - low)
+def rand_val(low, high):
+    return random.uniform(low, high)
 
-# دالة تهيئة الأوزان العشوائية
-def initialize_weights():
-    return [random_uniform(-0.5, 0.5) for _ in range(8)]
+def init_weights(structure):
+    return [[rand_val(-0.5, 0.5) for _ in range(structure[i] * structure[i + 1])] for i in range(len(structure) - 1)]
 
-# التمرير الأمامي في الشبكة العصبية
-def forward_pass(i1, i2, w, b1, b2, b3, b4):
-    # الطبقة المخفية
-    h1_input = i1 * w[0] + i2 * w[1] + b1
-    h2_input = i1 * w[2] + i2 * w[3] + b2
-    h1_output = tanh(h1_input)
-    h2_output = tanh(h2_input)
-    
-    # الطبقة الإخراجية
-    o1_input = h1_output * w[4] + h2_output * w[5] + b3
-    o2_input = h1_output * w[6] + h2_output * w[7] + b4
-    o1_output = tanh(o1_input)
-    o2_output = tanh(o2_input)
-    
-    return o1_output, o2_output
+def init_biases(structure):
+    return [[rand_val(-0.5, 0.5) for _ in range(structure[i])] for i in range(1, len(structure))]
 
-# المدخلات
-i1, i2 = 0.05, 0.10
-# تهيئة الأوزان والانحيازات
-weights = initialize_weights()
-b1, b2 = 0.5, 0.5  # انحيازات الطبقة المخفية
-b3, b4 = 0.7, 0.7  # انحيازات الطبقة الإخراجية
-# حساب المخرجات
-o1, o2 = forward_pass(i1, i2, weights, b1, b2, b3, b4)
-# طباعة النتائج
-print(f"Output o1: {o1:.4f}, Output o2: {o2:.4f}")
+def fwd_pass(inputs, weights, biases):
+    activations = inputs
+    for w, b in zip(weights, biases):
+        next_act = []
+        for j in range(len(b)):
+            act = sum(a * w[i + j * len(activations)] for i, a in enumerate(activations)) + b[j]
+            next_act.append(tanh_fn(act))
+        activations = next_act
+    return activations
+
+def build_nn(in_dim, hidden, out_dim):
+    struct = [in_dim] + hidden + [out_dim]
+    weights = init_weights(struct)
+    biases = init_biases(struct)
+    return weights, biases
+
+in_dim = 2
+hidden_layers = [6, 4, 3]
+out_dim = 2
+weights, biases = build_nn(in_dim, hidden_layers, out_dim)
+inputs = [0.05, 0.10]
+outputs = fwd_pass(inputs, weights, biases)
+print(f"NN Output: {', '.join(f'{o:.4f}' for o in outputs)}")
